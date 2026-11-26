@@ -10,20 +10,25 @@ source:
   sha256: 8f6c7165c38f528b6cbae8f9fae72cde3b765652df90597011a5f7b5e7fdb273
 
 build:
-  number: 0
+  number: 1
   skip:
-    - win
     - osx
-  script: build.sh
+  script:
+    file: ${{ "build.bat" if win else "build.sh" }}
 
 requirements:
   build:
     - ${{ compiler('c') }}
     - ${{ stdlib('c') }}
-    - make
-    - pkgconf
-    - bison
-    - flex
+    - if: unix
+      then:
+        - make
+        - pkgconf
+        - bison
+        - flex
+    - if: win
+      then:
+        - winflexbison
   host:
     - tk
     - cairo
