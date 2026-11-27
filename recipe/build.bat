@@ -121,7 +121,9 @@ if "%TCL_LIB%"=="" (echo ERROR: tcl86*.lib not found in %LIBRARY_LIB% & popd & e
 if "%TK_LIB%"==""  (echo ERROR: tk86*.lib not found in %LIBRARY_LIB%  & popd & exit /b 1)
 
 rem 5. Compile all C sources in parallel (/MP) with MSVC.
-cl /nologo /c /O2 /MD /W3 /MP ^
+rem    /Gy (Function-Level Linking) matches XSchemWin_cairo.vcxproj so link.exe
+rem    /OPT:REF discards unreferenced Unix-only functions (e.g. xserver_ok).
+cl /nologo /c /O2 /MD /W3 /MP /Gy ^
     /DNDEBUG /D_CONSOLE /DWIN32 /DUNICODE /D_UNICODE /DYY_NO_UNISTD_H /D_CRT_SECURE_NO_WARNINGS ^
     /I"%BUILD_DIR%" ^
     /I"%SRC_DIR%\src" ^
