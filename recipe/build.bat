@@ -122,7 +122,7 @@ if "%TK_LIB%"==""  (echo ERROR: tk86*.lib not found in %LIBRARY_LIB%  & popd & e
 
 rem 5. Compile all C sources in parallel (/MP) with MSVC.
 cl /nologo /c /O2 /MD /W3 /MP ^
-    /DNDEBUG /D_CONSOLE /DWIN32 /D_CRT_SECURE_NO_WARNINGS ^
+    /DNDEBUG /D_CONSOLE /DWIN32 /DUNICODE /D_UNICODE /DYY_NO_UNISTD_H /D_CRT_SECURE_NO_WARNINGS ^
     /I"%BUILD_DIR%" ^
     /I"%SRC_DIR%\src" ^
     /I"%LIBRARY_INC%" ^
