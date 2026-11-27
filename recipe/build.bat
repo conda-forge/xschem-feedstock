@@ -112,6 +112,13 @@ if exist "%LIBRARY_INC%\tkWinInt.h" goto :have_tkwinint
 if errorlevel 1 (popd & exit /b 1)
 :have_tkwinint
 
+rem 3c. Provide no-op Win32 stubs for XOpenDisplay/XCloseDisplay referenced by
+rem     src/draw.c's xserver_ok() (which is only called under #ifdef __unix__).
+echo #include "X11/Xlib.h" > "%BUILD_DIR%\win_xstubs.c"
+echo Display *XOpenDisplay(const char *d) { (void)d; return 0; } >> "%BUILD_DIR%\win_xstubs.c"
+echo int XCloseDisplay(Display *d) { (void)d; return 0; } >> "%BUILD_DIR%\win_xstubs.c"
+if errorlevel 1 (popd & exit /b 1)
+
 rem 4. Detect Tcl/Tk import libraries shipped by conda-forge's tk package.
 set "TCL_LIB="
 for %%L in (tcl86t.lib tcl86.lib) do if "!TCL_LIB!"=="" if exist "%LIBRARY_LIB%\%%L" set "TCL_LIB=%%L"
@@ -121,10 +128,11 @@ if "%TCL_LIB%"=="" (echo ERROR: tcl86*.lib not found in %LIBRARY_LIB% & popd & e
 if "%TK_LIB%"==""  (echo ERROR: tk86*.lib not found in %LIBRARY_LIB%  & popd & exit /b 1)
 
 rem 5. Compile all C sources in parallel (/MP) with MSVC.
-rem    /Gy (Function-Level Linking) matches XSchemWin_cairo.vcxproj so link.exe
-rem    /OPT:REF discards unreferenced Unix-only functions (e.g. xserver_ok).
+rem    Keep UNICODE off for main.c so Tk_Main/Tcl_Main match char **argv;
+rem    scheduler.c is compiled separately with /DUNICODE /D_UNICODE for its
+rem    wchar_t/TCHAR calls to FindExecutable/ShellExecute/GetTempPath.
 cl /nologo /c /O2 /MD /W3 /MP /Gy ^
-    /DNDEBUG /D_CONSOLE /DWIN32 /DUNICODE /D_UNICODE /DYY_NO_UNISTD_H /D_CRT_SECURE_NO_WARNINGS ^
+    /DNDEBUG /D_CONSOLE /DWIN32 /DYY_NO_UNISTD_H /D_CRT_SECURE_NO_WARNINGS ^
     /I"%BUILD_DIR%" ^
     /I"%SRC_DIR%\src" ^
     /I"%LIBRARY_INC%" ^
@@ -152,7 +160,6 @@ cl /nologo /c /O2 /MD /W3 /MP /Gy ^
     "%SRC_DIR%\src\paste.c" ^
     "%SRC_DIR%\src\psprint.c" ^
     "%SRC_DIR%\src\save.c" ^
-    "%SRC_DIR%\src\scheduler.c" ^
     "%SRC_DIR%\src\select.c" ^
     "%SRC_DIR%\src\spice_netlist.c" ^
     "%SRC_DIR%\src\store.c" ^
@@ -164,7 +171,18 @@ cl /nologo /c /O2 /MD /W3 /MP /Gy ^
     "%SRC_DIR%\src\xinit.c" ^
     "%BUILD_DIR%\eval_expr.c" ^
     "%BUILD_DIR%\expandlabel.c" ^
-    "%BUILD_DIR%\parselabel.c"
+    "%BUILD_DIR%\parselabel.c" ^
+    "%BUILD_DIR%\win_xstubs.c"
+if errorlevel 1 (popd & exit /b 1)
+
+cl /nologo /c /O2 /MD /W3 /Gy ^
+    /DNDEBUG /D_CONSOLE /DWIN32 /DUNICODE /D_UNICODE /DYY_NO_UNISTD_H /D_CRT_SECURE_NO_WARNINGS ^
+    /I"%BUILD_DIR%" ^
+    /I"%SRC_DIR%\src" ^
+    /I"%LIBRARY_INC%" ^
+    /I"%LIBRARY_INC%\cairo" ^
+    /Fo"%OBJ_DIR%\\" ^
+    "%SRC_DIR%\src\scheduler.c"
 if errorlevel 1 (popd & exit /b 1)
 
 rem 6. Link xschem.exe (and rawtovcd.exe helper tool).
