@@ -53,13 +53,64 @@ if errorlevel 1 (popd & exit /b 1)
 if errorlevel 1 (popd & exit /b 1)
 
 rem 3. Generate Windows config.h (shared conda-forge cairo.dll, no X11/XRender).
-> config.h (
+rem    src/xschem.h includes "../XSchemWin/config.h" on Windows, while
+rem    src/cairo_jpg.c includes "config.h", so write to both locations.
+(
     echo #define HAS_CAIRO 1
     echo #define HAS_XRENDER 0
     echo #define HAS_POPEN 0
     echo #define USER_CONF_DIR "userConf"
     echo #define _XOPEN_SOURCE
-)
+) > "%SRC_DIR%\XSchemWin\config.h"
+if errorlevel 1 (popd & exit /b 1)
+copy /y "%SRC_DIR%\XSchemWin\config.h" "%BUILD_DIR%\config.h"
+if errorlevel 1 (popd & exit /b 1)
+
+rem 3b. Conda-forge's Windows tk package installs public headers (tk.h,
+rem     tkDecls.h, tkPlatDecls.h, tkIntXlibDecls.h, X11/*.h) via Tk's
+rem     makefile.vc, but does not ship Tk's private win/ headers (tkWin.h,
+rem     tkWinInt.h). xschem only needs Tk_GetHWND (tkPlatDecls.h), Tk's Xlib
+rem     emulation declarations (tkIntXlibDecls.h), and Tk's bundled X11/*.h.
+if exist "%LIBRARY_INC%\tkWin.h" goto :have_tkwin
+(
+    echo #ifndef _TKWIN
+    echo #define _TKWIN
+    echo #ifndef _TK
+    echo #include "tk.h"
+    echo #endif
+    echo #include "windows.h"
+    echo #include "tkPlatDecls.h"
+    echo #endif
+) > "%BUILD_DIR%\tkWin.h"
+if errorlevel 1 (popd & exit /b 1)
+:have_tkwin
+
+if exist "%LIBRARY_INC%\tkWinInt.h" goto :have_tkwinint
+(
+    echo #ifndef _TKWININT
+    echo #define _TKWININT
+    echo #include "io.h"
+    echo #include "malloc.h"
+    echo #include "tchar.h"
+    echo #include "tkWin.h"
+    echo #include "tkIntXlibDecls.h"
+    echo #include "X11/Xlib.h"
+    echo #include "X11/cursorfont.h"
+    echo #include "X11/keysym.h"
+    echo #include "X11/Xatom.h"
+    echo #include "X11/Xutil.h"
+    echo #ifndef __GNUC__
+    echo #ifndef strncasecmp
+    echo #define strncasecmp _strnicmp
+    echo #endif
+    echo #ifndef strcasecmp
+    echo #define strcasecmp _stricmp
+    echo #endif
+    echo #endif
+    echo #endif
+) > "%BUILD_DIR%\tkWinInt.h"
+if errorlevel 1 (popd & exit /b 1)
+:have_tkwinint
 
 rem 4. Detect Tcl/Tk import libraries shipped by conda-forge's tk package.
 set "TCL_LIB="

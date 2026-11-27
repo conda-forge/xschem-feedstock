@@ -32,13 +32,17 @@ requirements:
   host:
     - tk
     - cairo
-    - xorg-libx11
-    - xorg-libxpm
-    - xorg-xorgproto   # X11/X.h and friends (xorg-libx11 does not ship protocol headers)
+    - if: unix
+      then:
+        - xorg-libx11
+        - xorg-libxpm
+        - xorg-xorgproto   # X11/X.h and friends (xorg-libx11 does not ship protocol headers)
   run:
     - tk
     - cairo
-    - xorg-libxpm
+    - if: unix
+      then:
+        - xorg-libxpm
 
 tests:
   - script:
